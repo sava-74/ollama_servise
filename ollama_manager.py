@@ -5,6 +5,7 @@ import os
 import sys
 import signal
 import time
+import webbrowser
 
 class OllamaManager:
     def __init__(self, root):
@@ -45,7 +46,7 @@ class OllamaManager:
         self.lbl_stop.pack(side=tk.RIGHT, padx=10, pady=10)
 
         # Кнопка ОТКРЫТЬ ЛОГ
-        self.lbl_open_log = tk.Label(self.top_frame, text="📂 ОТКРЫТЬ ЛОГ", bg="#007aff", fg="white", font=("Helvetica", 12, "bold"), padx=20, pady=10, cursor="hand2")
+        self.lbl_open_log = tk.Label(self.top_frame, text="📂 ЛОГ", bg="#007aff", fg="white", font=("Helvetica", 12, "bold"), padx=20, pady=10, cursor="hand2")
         self.lbl_open_log.pack(side=tk.RIGHT, padx=10, pady=10)
         self.lbl_open_log.bind("<Button-1>", lambda e: self.open_log())
 
@@ -128,11 +129,14 @@ class OllamaManager:
         if os.path.exists(self.log_file):
             subprocess.Popen(['open', self.log_file])
     
+    def open_link(self, url):
+        webbrowser.open(url)
+
     def show_about(self):
         # Создаем всплывающее окно
         about_win = tk.Toplevel(self.root)
         about_win.title("О программе")
-        about_win.geometry("450x620")
+        about_win.geometry("450x335")
         about_win.transient(self.root) # Поверх главного окна
         about_win.grab_set()           # Блокировка главного окна
         about_win.configure(bg="#2d2d2d")
@@ -148,9 +152,34 @@ class OllamaManager:
         tk.Label(about_win, text="Утилита для запуска и мониторинга Ollama.", bg="#2d2d2d", fg="#cccccc").pack()
         
         tk.Label(about_win, text="⚠ ТРЕБОВАНИЯ:", bg="#2d2d2d", fg="#ffaa00", font=("Helvetica", 10, "bold")).pack(pady=(10,0))
-        tk.Label(about_win, text="Для работы требуется установленная Ollama(0.24.0)\nв папке /Програмы.\nСайт для установки Olama https://ollama.com/ \n автор SavaLab", bg="#2d2d2d", fg="#cccccc").pack()
         
-        tk.Button(about_win, text="OK", command=about_win.destroy, bg="#444444", fg="white", relief=tk.FLAT, width=10).pack(pady=15)
+                # Текст требования
+        tk.Label(about_win, text="Для работы требуется установленная Ollama(0.24.0)\nв папке Програмы.", 
+                 bg="#2d2d2d", fg="#cccccc").pack(pady=5)
+        
+        tk.Label(about_win, text="!!! ВАЖНО Ollama не запускать только установка.", 
+                 bg="#2d2d2d", fg="#ff0000").pack(pady=5)
+
+        # Ссылка 1: Сайт
+        lbl_site = tk.Label(about_win, text="🌐 Сайт Ollama", fg="#007aff", bg="#2d2d2d", 
+                            cursor="hand2", font=("Helvetica", 10, "underline"))
+        lbl_site.pack(pady=2)
+        lbl_site.bind("<Button-1>", lambda e: self.open_link("https://ollama.com"))
+        lbl_site.bind("<Enter>", lambda e: lbl_site.config(fg="#0056b3"))
+        lbl_site.bind("<Leave>", lambda e: lbl_site.config(fg="#007aff"))
+
+        # Ссылка 2: Гитхаб
+        tk.Label(about_win, text="\n Автор: Савченко Илья", bg="#2d2d2d", fg="#cccccc").pack()
+
+        lbl_repo = tk.Label(about_win, text="💻 Репозиторий SavaLab", fg="#007aff", bg="#2d2d2d", 
+                            cursor="hand2", font=("Helvetica", 10, "underline"))
+        lbl_repo.pack(pady=2)
+        lbl_repo.bind("<Button-1>", lambda e: self.open_link("https://github.com/sava-74/ollama_servise")) # Убрал .git для корректного открытия в браузере
+        lbl_repo.bind("<Enter>", lambda e: lbl_repo.config(fg="#0056b3"))
+        lbl_repo.bind("<Leave>", lambda e: lbl_repo.config(fg="#007aff"))
+
+        
+        # tk.Button(about_win, text="OK", command=about_win.destroy, bg="#262626", fg="#39B221", relief=tk.FLAT, width=10).pack(pady=15)
 
 
     def show_context_menu(self, event):
