@@ -6,12 +6,13 @@ import sys
 import signal
 import time
 import webbrowser
+import model_manager
 
 class OllamaManager:
     def __init__(self, root):
         self.root = root
         root.title("Ollama Service") # Исправил написание на Service
-        root.geometry("800x600")
+        root.geometry("900x700")
         root.configure(bg="#212121")
         
         # --- ДИНАМИЧЕСКИЙ ПУТЬ ---
@@ -49,6 +50,15 @@ class OllamaManager:
         self.lbl_open_log = tk.Label(self.top_frame, text="📂 ЛОГ", bg="#007aff", fg="white", font=("Helvetica", 12, "bold"), padx=20, pady=10, cursor="hand2")
         self.lbl_open_log.pack(side=tk.RIGHT, padx=10, pady=10)
         self.lbl_open_log.bind("<Button-1>", lambda e: self.open_log())
+
+        # Кнопка МОДЕЛИ
+        self.lbl_models = tk.Label(self.top_frame, text="📚 МОДЕЛИ", bg="#6c757d", fg="white", font=("Helvetica", 12, "bold"), padx=20, pady=10, cursor="hand2")
+        self.lbl_models.pack(side=tk.RIGHT, padx=10, pady=10)
+        self.lbl_models.bind("<Button-1>", lambda e: self.open_models_window())
+
+        # Ховер
+        self.lbl_models.bind("<Enter>", lambda e: self.lbl_models.config(bg="#5a6268"))
+        self.lbl_models.bind("<Leave>", lambda e: self.lbl_models.config(bg="#6c757d"))
 
         # Окно логов
         self.log_frame = tk.Frame(root, bg="#1a1a1a")
@@ -128,6 +138,9 @@ class OllamaManager:
     def open_log(self):
         if os.path.exists(self.log_file):
             subprocess.Popen(['open', self.log_file])
+
+    def open_models_window(self):
+        model_manager.ModelManagerWindow(self.root)
     
     def open_link(self, url):
         webbrowser.open(url)
