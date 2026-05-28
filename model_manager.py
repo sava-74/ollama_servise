@@ -203,14 +203,21 @@ class ModelManagerWindow(tk.Toplevel):
                     env["PATH"] = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:" + env.get("PATH", "")
 
                     subprocess.run([self.ollama_bin, "rm", model_name], check=True, env=env)
-                    self.after(0, self.refresh_list)
+
+                    self.after(0, lambda: self._log(f"Модель {model_name} удалена."))
+                    # self.after(0, self.refresh_list)
                 except subprocess.CalledProcessError as e:
                     err = e.stderr.strip() if e.stderr else "Ошибка"
                     self.after(0, lambda: self._log(f"Ошибка удаления: {err}"))
                 except Exception as e:
                     self.after(0, lambda: self._log(f"Ошибка: {str(e)}"))
+                #finally:
+                #    self.after(0, lambda: setattr(self, 'is_busy', False))
                 finally:
+                # 1. Снимаем блокировку
                     self.after(0, lambda: setattr(self, 'is_busy', False))
+                # 2. И только теперь обновляем список
+                    self.after(0, self.refresh_list)
 
             threading.Thread(target=run, daemon=True).start()
 
@@ -254,12 +261,18 @@ class ModelManagerWindow(tk.Toplevel):
                 
                 process.wait()
                 self.after(0, self._log, "Загрузка завершена.")
-                self.after(0, self.refresh_list)
+                # self.after(0, self.refresh_list)
                 
             except Exception as e:
                 self.after(0, lambda: self._log(f"Ошибка: {str(e)}"))
+            #finally:
+            #    self.after(0, self._enable_controls)
             finally:
+                # 1. Включаем кнопки и снимаем is_busy
                 self.after(0, self._enable_controls)
+                # 2. Обновляем список (теперь is_busy уже False)
+                self.after(0, self.refresh_list)
+
 
         threading.Thread(target=run, daemon=True).start()
 
