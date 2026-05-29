@@ -137,49 +137,56 @@ class ModelManagerWindow(tk.Toplevel):
         def run():
             try:
                 self.is_busy = True
-                # Исправлено: используем self.after вместо self.root
-                self.after(0, self._log, "Обновление списка...")
+                self.after(0, self._log, "Проверка сервера...")
                 
                 env = os.environ.copy()
                 env["PATH"] = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:" + env.get("PATH", "")
+                env["OLLAMA_HOST"] = "http://localhost:11434" # Явно указываем адрес для CLI
                 
+                import time, urllib.request
+                # Ждем открытия порта (макс 4 сек)
+                server_ready = False
+                for _ in range(4):
+                    try:
+                        urllib.request.urlopen("http://localhost:11434", timeout=1)
+                        server_ready = True
+                        break
+                    except:
+                        time.sleep(1)
+                        
+                if not server_ready:
+                    self.after(0, lambda: self._log("Сервер не ответил. Нажмите 'Запустить' в главном окне."))
+                    return
+
+                self.after(0, self._log, "Обновление списка...")
                 result = subprocess.run([self.ollama_bin, "list"], capture_output=True, text=True, env=env)
                 
                 if result.returncode != 0:
-                    self.after(0, lambda: self._log(f"Ошибка списка: {result.stderr.strip()}"))
+                    self.after(0, lambda: self._log(f"Ошибка: {result.stderr.strip()}"))
                     return
 
                 lines = result.stdout.strip().split('\n')
-                
-                # Очистка
                 self.after(0, lambda: [self.tree.delete(i) for i in self.tree.get_children()])
 
                 if len(lines) > 1:
                     for line in lines[1:]:
                         if not line.strip(): continue
                         parts = line.split()
-                        
-                        # Парсинг строки: NAME ID SIZE [UNIT] MODIFIED...
                         if len(parts) >= 4:
                             name = parts[0]
                             units = ['B', 'KB', 'MB', 'GB', 'TB']
-                            
-                            # Проверка формата размера (с пробелом или без)
                             if parts[3] in units:
                                 size_str = f"{parts[2]} {parts[3]}"
                                 mod_idx = 4
                             else:
                                 size_str = parts[2]
                                 mod_idx = 3
-                            
                             modified = " ".join(parts[mod_idx:])
-                            
-                            # Исправлено: передача аргументов в lambda для корректного захвата переменных
                             self.after(0, lambda n=name, s=size_str, m=modified: self.tree.insert("", "end", values=(n, s, m)))
-
+                            
                 self.after(0, lambda: self._log("Список обновлен."))
             except Exception as e:
-                self.after(0, lambda: self._log(f"Ошибка обновления: {str(e)}"))
+                self.after(0, lambda: self._log(f"Ошибка: {str(e)}"))
             finally:
                 self.after(0, lambda: setattr(self, 'is_busy', False))
 

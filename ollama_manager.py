@@ -8,6 +8,8 @@ import time
 import webbrowser
 import model_manager
 
+from datetime import datetime
+
 class OllamaManager:
     def __init__(self, root):
         self.root = root
@@ -268,15 +270,27 @@ class OllamaManager:
         self._on_stopped()
 
     def _on_started(self):
+        self.is_running = True
         self._set_status("РАБОТАЕТ", "#00ff00")
         self._enable_stop()
+        
+        now = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        msg = f"##################################################\n      {now} СЕРВИС ЗАПУЩЕН          \n##################################################\n"
+        self._log(msg)
 
     def _on_stopped(self):
+        # Если уже остановлено (защита от двойного вызова), выходим сразу
+        if not self.is_running:
+            return
         self.is_running = False
         self.process = None
         self._set_status("ОСТАНОВЛЕН", "#ff4444")
         self._enable_start()
         self._disable_stop()
+        
+        now = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        msg = f"##################################################\n      {now} СЕРВИС ОСТАНОВЛЕН       \n##################################################\n"
+        self._log(msg)
 
     def _set_status(self, text, color):
         self.lbl_status.config(text=f"  СТАТУС: {text}", fg=color)
