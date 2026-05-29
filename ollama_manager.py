@@ -225,6 +225,16 @@ class OllamaManager:
                 env["OLLAMA_KEEP_ALIVE"] = "-1"
                 env["OLLAMA_NO_CLOUD"] = "true"
 
+                # --- FIX: Принудительно убиваем все старые ollama serve, чтобы освободить порт ---
+                try:
+                    # Используем полный путь к pkill для надежности внутри .app
+                    subprocess.run(["/usr/bin/pkill", "-f", "ollama serve"], check=False)
+                    time.sleep(1.5)  # Ждем, пока ОС отпустит порт
+                except:
+                    pass
+                
+                # Далее идет твой код запуска...
+
                 # Запуск с найденным путем
                 with open(self.log_file, "a") as f:
                     self.process = subprocess.Popen([ollama_bin, "serve"], env=env, stdout=f, stderr=subprocess.STDOUT)
