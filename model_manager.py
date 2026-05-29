@@ -4,6 +4,8 @@ import subprocess
 import threading
 import os
 import json  # Добавлен для парсинга прогресса
+import re
+
 
 class ModelManagerWindow(tk.Toplevel):
     def __init__(self, parent):
@@ -124,8 +126,11 @@ class ModelManagerWindow(tk.Toplevel):
         return "ollama"
 
     def _log(self, text):
+        # Вырезаем ANSI-коды (спиннеры, цвета) перед выводом
+        clean_text = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', text)
+        
         self.txt_log.config(state=tk.NORMAL)
-        self.txt_log.insert(tk.END, text + "\n")
+        self.txt_log.insert(tk.END, clean_text + "\n")
         self.txt_log.see(tk.END)
         self.txt_log.config(state=tk.DISABLED)
 
@@ -234,52 +239,38 @@ class ModelManagerWindow(tk.Toplevel):
             messagebox.showwarning("Внимание", "Введите имя модели")
             return
 
+        # СРАЗУ очищаем поле, чтобы не было дублей при повторном клике
+        self.entry_name.delete(0, tk.END)
+
         def run():
             try:
                 self.is_busy = True
-                self.entry_name.config(state=tk.DISABLED)
                 self.btn_pull.config(state=tk.DISABLED)
                 self.after(0, lambda: self._log(f"Загрузка {model_name}..."))
                 
                 env = os.environ.copy()
                 env["PATH"] = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:" + env.get("PATH", "")
+                env["OLLAMA_HOST"] = "http://localhost:11434"
 
                 process = subprocess.Popen([self.ollama_bin, "pull", model_name], 
                                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
                                            text=True, env=env)
                 
-                # Чтение вывода построчно
                 for line in process.stdout:
-                    line = line.strip()
-                    if line:
-                        try:
-                            # Парсинг JSON для красивого прогресса
-                            data = json.loads(line)
-                            status = data.get("status", "")
-                            if "total" in data and "completed" in data:
-                                pct = int(data["completed"] / data["total"] * 100)
-                                log_msg = f"{status} ... {pct}%"
-                            else:
-                                log_msg = status
-                            self.after(0, self._log, log_msg)
-                        except:
-                            # Если не JSON, пишем как есть
-                            self.after(0, self._log, line)
+                    # Чистим строку от мусора перед обработкой
+                    clean_line = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', line).strip()
+                    
+                    if clean_line:
+                        self.after(0, self._log, clean_line)
                 
                 process.wait()
                 self.after(0, self._log, "Загрузка завершена.")
-                # self.after(0, self.refresh_list)
                 
             except Exception as e:
                 self.after(0, lambda: self._log(f"Ошибка: {str(e)}"))
-            #finally:
-            #    self.after(0, self._enable_controls)
             finally:
-                # 1. Включаем кнопки и снимаем is_busy
                 self.after(0, self._enable_controls)
-                # 2. Обновляем список (теперь is_busy уже False)
                 self.after(0, self.refresh_list)
-
 
         threading.Thread(target=run, daemon=True).start()
 

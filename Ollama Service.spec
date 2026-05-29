@@ -47,5 +47,6 @@ app = BUNDLE(
     coll,
     name='Ollama Service.app',
     icon='icon.icns',
-    bundle_identifier=None,
+    bundle_identifier='com.sava.ollama',
+    info_plist={'CFBundleShortVersionString': '1.1', 'CFBundleVersion': '1.1'},
 )

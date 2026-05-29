@@ -159,7 +159,7 @@ class OllamaManager:
 
         # Контент
         tk.Label(about_win, text="Ollama Service Manager", bg="#2d2d2d", fg="#ffffff", font=("Helvetica", 14, "bold")).pack(pady=(20, 5))
-        tk.Label(about_win, text="Версия: 1.0", bg="#2d2d2d", fg="#aaaaaa").pack()
+        tk.Label(about_win, text="Версия: 1.1", bg="#2d2d2d", fg="#aaaaaa").pack()
         
         # Разделитель
         tk.Frame(about_win, height=2, bg="#555555").pack(fill=tk.X, padx=20, pady=10)
