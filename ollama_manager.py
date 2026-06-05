@@ -159,7 +159,7 @@ class OllamaManager:
 
         # Контент
         tk.Label(about_win, text="Ollama Service Manager", bg="#2d2d2d", fg="#ffffff", font=("Helvetica", 14, "bold")).pack(pady=(20, 5))
-        tk.Label(about_win, text="Версия: 1.1", bg="#2d2d2d", fg="#aaaaaa").pack()
+        tk.Label(about_win, text="Версия: 1.2", bg="#2d2d2d", fg="#aaaaaa").pack()
         
         # Разделитель
         tk.Frame(about_win, height=2, bg="#555555").pack(fill=tk.X, padx=20, pady=10)
@@ -207,6 +207,8 @@ class OllamaManager:
         if self.is_running: return
         self.is_running = True
         self._set_status("ЗАПУСК...", "#ffaa00")
+        timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        self.root.after(0, self._log, f"[{timestamp}] Запуск сервиса! Программа Ollama должна быть закрыта \n")
         self._disable_start()
 
         def run():
@@ -227,13 +229,44 @@ class OllamaManager:
                 env["OLLAMA_KEEP_ALIVE"] = "-1"
                 env["OLLAMA_NO_CLOUD"] = "true"
 
-                # --- FIX: Принудительно убиваем все старые ollama serve, чтобы освободить порт ---
+            # --- FIX: Закрываем GUI-приложение Ollama, чтобы остановить внутренний сервер ---
                 try:
-                    # Используем полный путь к pkill для надежности внутри .app
-                    subprocess.run(["/usr/bin/pkill", "-f", "ollama serve"], check=False)
-                    time.sleep(1.5)  # Ждем, пока ОС отпустит порт
-                except:
-                    pass
+                # Шаг 1: Попробуем стандартный quit через AppleScript (закроет окно, может оставить фоновый процесс)
+                    subprocess.run(["/usr/bin/osascript", "-e", 'tell application "Ollama" to quit'], check=False, timeout=5)
+                    time.sleep(1.0) # Небольшая пауза
+                except subprocess.TimeoutExpired:
+                    #print("Предупреждение: Ollama не отреагировал на quit, переходим к pkill.")
+                    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                    self.root.after(0, self._log, f"[{timestamp}] Предупреждение: Ollama не отреагировал на quit, переходим к pkill.\n")
+                except Exception as e:
+                    #print(f"Ошибка при выполнении quit: {e}")
+                    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                    self.root.after(0, self._log, f"[{timestamp}] Ошибка при закрытии.{e}\n")
+
+            # Шаг 2: Принудительно убиваем все процессы с именем "Ollama" (имя исполняемого файла в .app bundle)
+            # Это убьёт и GUI, и внутренний ollama serve, и любой фоновый процесс.
+                try:
+                    #print("Принудительная остановка процесса Ollama...")
+                    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                    self.root.after(0, self._log, f"[{timestamp}] Принудительная остановка процесса Ollama и портов... \n")
+                # Используем pkill с флагом -x для точного совпадения имени исполняемого файла.
+                # Имя исполняемого файла для GUI Ollama.app - скорее всего "Ollama".
+                    subprocess.run(["/usr/bin/pkill", "-x", "Ollama"], check=False)
+                # Также убиваем caffeinate, если оно могло быть запущено с GUI
+                    subprocess.run(["/usr/bin/pkill", "-x", "caffeinate"], check=False)
+                
+                # Ждем немного, чтобы ОС точно отпустила порт
+                    time.sleep(2.0) 
+                    #print("Процесс Ollama должен быть остановлен.")
+                    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                    self.root.after(0, self._log, f"[{timestamp}] Процесс Ollama должен быть остановлен.\n")
+                except Exception as e:
+                    #print(f"Ошибка при выполнении pkill: {e}")
+                    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                    self.root.after(0, self._log, f"[{timestamp}] Ошибка при выполнении остановки процесса.{e}\n")
+                # Логировать в GUI можно по аналогии с self._log
+                pass
+
                 
                 # Далее идет твой код запуска...
 
@@ -242,7 +275,7 @@ class OllamaManager:
                 #    self.process = subprocess.Popen([ollama_bin, "serve"], env=env, stdout=f, stderr=subprocess.STDOUT)
 
                 # Формируем команду: caffeinate не даст маку уснуть
-                cmd = ["/usr/bin/caffeinate", "-i", "-m", ollama_bin, "serve"]
+                cmd = ["/usr/bin/caffeinate", "-i", "-m", "-s", ollama_bin, "serve"]
 
 
                 with open(self.log_file, "a") as f:
@@ -291,7 +324,7 @@ class OllamaManager:
         self._enable_stop()
         
         now = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-        msg = f"##################################################\n      {now} СЕРВИС ЗАПУЩЕН          \n##################################################\n"
+        msg = f"##################################################\n      {now} СЕРВИС ЗАПУЩЕН | СОН ОТКЛЮЧЕН         \n##################################################\n"
         self._log(msg)
 
     def _on_stopped(self):
