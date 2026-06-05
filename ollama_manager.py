@@ -238,8 +238,21 @@ class OllamaManager:
                 # Далее идет твой код запуска...
 
                 # Запуск с найденным путем
+                # with open(self.log_file, "a") as f:
+                #    self.process = subprocess.Popen([ollama_bin, "serve"], env=env, stdout=f, stderr=subprocess.STDOUT)
+
+                # Формируем команду: caffeinate не даст маку уснуть
+                cmd = ["/usr/bin/caffeinate", "-i", "-m", ollama_bin, "serve"]
+
+
                 with open(self.log_file, "a") as f:
-                    self.process = subprocess.Popen([ollama_bin, "serve"], env=env, stdout=f, stderr=subprocess.STDOUT)
+                    self.process = subprocess.Popen(
+                        cmd,  # <-- ВАЖНО: передаем cmd, а не [ollama_bin, "serve"]
+                        env=env,
+                        stdout=f,
+                        stderr=subprocess.STDOUT
+                        #start_new_session=True  # <-- ИЗОЛИРУЕТ ОТ GUI-ЦИКЛА MACOS
+                    )
 
                 self.root.after(0, self._on_started)
                 self.process.wait()
@@ -260,11 +273,14 @@ class OllamaManager:
         
         if self.process:
             try:
+                # Сначала мягкий сигнал
                 self.process.terminate()
-                self.process.wait(timeout=5)
+                self.process.wait(timeout=3)
             except:
                 try:
-                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                    # Если не умер - жесткий kill по PID
+                    import os, signal
+                    os.kill(self.process.pid, signal.SIGKILL)
                 except:
                     pass
         self._on_stopped()
